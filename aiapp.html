@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <div>
+        
+        <a style= "color: green;" href="startbootstrap-resume-gh-pages/index.html">Return Home</a><br>
+        <a style= "color: green;" href="scratch.html">Italy Travel</a>
+        <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+        
+    </div>
+    
+    <meta charset="UTF-8">
+    <title>Google Dinosaur Jumping Game</title>
+    <style>
+        /* Basic Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body Styling */
+        body {
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Game Container */
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 200px;
+            border: 2px solid #333;
+            background-color: #fff;
+            overflow: hidden;
+        }
+
+        /* Ground */
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 20px;
+            background-color: #555;
+        }
+
+        /* Dinosaur */
+        .dino {
+            position: absolute;
+            bottom: 20px; /* Start on the ground */
+            left: 50px;
+            width: 40px;
+            height: 40px;
+            background-color: #000; /* Black block */
+            border-radius: 5px;
+        }
+
+        /* Obstacle */
+        .obstacle {
+            position: absolute;
+            bottom: 20px;
+            right: -30px; /* Start off-screen */
+            width: 20px;
+            height: 40px;
+            background-color: red;
+            animation: moveObstacle 2s linear infinite;
+        }
+
+        /* Obstacle Movement */
+        @keyframes moveObstacle {
+            from { right: -30px; }
+            to { right: 830px; } /* Moves across the container (800px width + obstacle width) */
+        }
+
+        /* Jump Animation */
+        .jump {
+            animation: jump 0.6s ease-out;
+        }
+
+        @keyframes jump {
+            0% { bottom: 20px; }
+            50% { bottom: 150px; } /* Increased jump height */
+            100% { bottom: 20px; }
+        }
+
+        /* Score Display */
+        .score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
+            color: #333;
+        }
+
+        /* Game Over Overlay */
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: red;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="ground"></div>
+        <div class="dino" id="dino"></div>
+        <div class="obstacle" id="obstacle"></div>
+        <div class="score" id="score">Score: 0</div>
+        <div class="game-over" id="gameOver">Game Over!</div>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const dino = document.getElementById('dino');
+        const obstacle = document.getElementById('obstacle');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverText = document.getElementById('gameOver');
+
+        // Game variables
+        let isJumping = false;
+        let score = 0;
+        let gameRunning = true;
+        let collisionChecker;
+        let dinoBottom = 20;  // Starting position of dino's bottom (on the ground)
+
+        // Function to handle the jump
+        function jump() {
+            if (isJumping || !gameRunning) return;
+            isJumping = true;
+            dino.classList.add('jump');
+
+            // Update the bottom position of dino (increasing height during jump)
+            setTimeout(() => {
+                dino.classList.remove('jump');
+                isJumping = false;
+                dinoBottom = 20;  // Reset to the ground position after jump
+            }, 600); // Duration of the jump animation
+
+            dinoBottom = 150; // Temporarily set the dino to the highest point of the jump
+        }
+
+        // Event listeners for jump (spacebar and touch)
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'Space') {
+                jump();
+            }
+        });
+
+        document.addEventListener('touchstart', function() {
+            jump();
+        });
+
+        // Function to update the score
+        function updateScore() {
+            score++;
+            scoreDisplay.textContent = `Score: ${score}`;
+        }
+
+        // Function to reset obstacle position and animation
+        function resetObstacle() {
+            obstacle.style.animation = 'none';
+            obstacle.offsetHeight; /* Trigger reflow */
+            obstacle.style.animation = 'moveObstacle 2s linear infinite';
+        }
+
+        // Function to restart the game
+        function restartGame() {
+            // Reset score
+            score = 0;
+            scoreDisplay.textContent = `Score: 0`;
+
+            // Hide Game Over text
+            gameOverText.style.display = 'none';
+
+            // Reset obstacle animation
+            resetObstacle();
+
+            // Reset game state
+            gameRunning = true;
+        }
+
+        // Function to handle collision detection
+        function checkCollision() {
+            const dinoRect = dino.getBoundingClientRect();
+            const obstacleRect = obstacle.getBoundingClientRect();
+            const containerRect = document.querySelector('.game-container').getBoundingClientRect();
+
+            // Only check for collisions if the dinosaur is on the ground (not jumping)
+            if (dinoBottom === 20) {  // Only detect collisions when dino is on the ground
+                // Collision condition:
+                if (
+                    obstacleRect.left < dinoRect.right &&
+                    obstacleRect.right > dinoRect.left &&
+                    dinoRect.bottom <= (containerRect.bottom - 20) // Ground level collision
+                ) {
+                    // Collision detected
+                    gameRunning = false;
+                    gameOverText.style.display = 'block';
+                    resetObstacle();
+
+                    // Restart the game after a short delay
+                    setTimeout(() => {
+                        restartGame();
+                    }, 1000); // 1-second delay before restarting
+                }
+            }
+        }
+
+        // Start collision detection interval
+        function startCollisionDetection() {
+            collisionChecker = setInterval(() => {
+                if (gameRunning) {
+                    checkCollision();
+                }
+            }, 10); // Check every 10ms
+        }
+
+        // Listen for when the obstacle animation completes a cycle to update score
+        obstacle.addEventListener('animationiteration', () => {
+            if (gameRunning) {
+                updateScore();
+            }
+        });
+
+        // Initialize the game
+        function initGame() {
+            restartGame();
+            startCollisionDetection();
+        }
+
+        // Start the game on page load
+        window.onload = initGame;
+    </script>
+</body>
+</html>
